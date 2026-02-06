@@ -211,6 +211,6 @@ class ToolsMode(MenuMode):
             desc = TOOLS[selected_idx].get('desc', '')
             canvas.text(2, 115, desc, colour='text_dim', font='tiny')
         
-        # self._render_footer(canvas, "●:Toggle K3:Refresh")
+        self._render_footer(canvas, "●:Toggle K3:Refresh")
         
         return canvas.get_image()

@@ -169,11 +169,22 @@ class BaseMode(ABC):
     def _render_menu(self, canvas: Canvas, start_y: int = 20) -> int:
         """
         Render the menu if present.
-        
+
+        Dynamically caps visible_count so menu items never overlap the
+        footer area, and the display scrolls properly when navigating
+        past the last visible item.
+
         Returns Y position after menu.
         """
         if self._menu:
             self._menu.start_y = start_y
+            # Reserve 12px at the bottom for the footer (tiny font + padding)
+            item_height = 15
+            available = DISPLAY_HEIGHT - 12 - start_y
+            max_visible = max(1, available // item_height)
+            self._menu.visible_count = min(
+                max_visible, MENU_VISIBLE_ITEMS, len(self._menu.items)
+            )
             return self._menu.render(canvas)
         return start_y
     

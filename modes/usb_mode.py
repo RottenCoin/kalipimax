@@ -305,7 +305,7 @@ class USBMode(MenuMode):
         self._menu.start_y = y
         self._render_menu(canvas, start_y=y)
         
-        # self._render_footer(canvas, "K3:Disable gadget")
+        self._render_footer(canvas, "K3:Disable gadget")
         
         return canvas.get_image()
     

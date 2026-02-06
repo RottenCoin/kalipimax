@@ -150,7 +150,7 @@ exploit -j
         self._menu.start_y = y
         self._render_menu(canvas, start_y=y)
         
-        # self._render_footer(canvas, "K3:Kill listeners")
+        self._render_footer(canvas, "K3:Kill listeners")
         
         return canvas.get_image()
     

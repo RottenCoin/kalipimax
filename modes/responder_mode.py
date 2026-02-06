@@ -183,7 +183,7 @@ class ResponderMode(MenuMode):
         self._menu.start_y = y
         self._render_menu(canvas, start_y=y)
         
-        # self._render_footer(canvas, "K3:Stop/Refresh")
+        self._render_footer(canvas, "K3:Stop/Refresh")
         
         return canvas.get_image()
     
