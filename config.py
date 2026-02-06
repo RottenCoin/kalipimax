@@ -31,6 +31,11 @@ LCD_BL_PIN = 24
 DISPLAY_WIDTH = 128
 DISPLAY_HEIGHT = 128
 
+# Display offsets (vary by HAT revision)
+# V4 typically requires y_offset=3 to prevent bottom-line corruption
+LCD_X_OFFSET = 2
+LCD_Y_OFFSET = 3
+
 import os
 
 # =============================================================================

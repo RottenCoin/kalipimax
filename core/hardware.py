@@ -26,7 +26,8 @@ from PIL import Image
 
 from config import (
     GPIO_PINS, LCD_RST_PIN, LCD_DC_PIN, LCD_CS_PIN, LCD_BL_PIN,
-    DISPLAY_WIDTH, DISPLAY_HEIGHT, BUTTON_DEBOUNCE, BACKLIGHT_TIMEOUT
+    DISPLAY_WIDTH, DISPLAY_HEIGHT, LCD_X_OFFSET, LCD_Y_OFFSET,
+    BUTTON_DEBOUNCE, BACKLIGHT_TIMEOUT
 )
 from core.logger import log
 
@@ -152,21 +153,17 @@ class LCDDriver:
     
     def _set_window(self, x0: int, y0: int, x1: int, y1: int):
         """Set the drawing window."""
-        # Offset for 1.44" display
-        x_offset = 2
-        y_offset = 1
-        
         self._write_cmd(self._CASET)
         self._write_data(0x00)
-        self._write_data(x0 + x_offset)
+        self._write_data(x0 + LCD_X_OFFSET)
         self._write_data(0x00)
-        self._write_data(x1 + x_offset)
+        self._write_data(x1 + LCD_X_OFFSET)
         
         self._write_cmd(self._RASET)
         self._write_data(0x00)
-        self._write_data(y0 + y_offset)
+        self._write_data(y0 + LCD_Y_OFFSET)
         self._write_data(0x00)
-        self._write_data(y1 + y_offset)
+        self._write_data(y1 + LCD_Y_OFFSET)
         
         self._write_cmd(self._RAMWR)
     
