@@ -68,7 +68,6 @@ cd kalipimax
 sudo bash install.sh
 
 # Start
-sudo kalipi-config to enable SPI
 sudo python3 main.py
 ```
 

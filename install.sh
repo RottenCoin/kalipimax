@@ -205,6 +205,15 @@ apt install -y \
 
 echo "  ✓ Core dependencies installed"
 
+# --- hardware setup, enabling SPI in kodipi-config sometimes holds only until reboot ---
+
+echo -e "${YELLOW}[4/6] Enabling SPI interface...${NC}"
+
+CONFIG_FILE="/boot/firmware/config.txt"
+[ -f "$CONFIG_FILE" ] || CONFIG_FILE="/boot/config.txt"
+
+grep -q "^dtparam=spi=on" "$CONFIG_FILE" || echo "dtparam=spi=on" >> "$CONFIG_FILE"
+
 # ---------------------------------------------------------------------------
 # [5/10] Python packages
 # ---------------------------------------------------------------------------
