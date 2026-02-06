@@ -1,0 +1,12 @@
+# KaliPiMax Dependencies
+# Install with: pip install -r requirements.txt --break-system-packages
+
+# Core dependencies
+RPi.GPIO>=0.7.0
+spidev>=3.5
+Pillow>=9.0.0
+psutil>=5.9.0
+numpy>=1.21.0
+
+# Optional: for enhanced CPU temperature reading
+# gpiozero>=1.6.2

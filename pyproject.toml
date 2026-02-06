@@ -1,0 +1,150 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kalipimax"
+version = "2.0.0"
+description = "Raspberry Pi Offensive Security Toolkit with LCD Control"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "KaliPiMax Team"}
+]
+keywords = [
+    "raspberry-pi",
+    "security",
+    "penetration-testing",
+    "lcd",
+    "hacking",
+    "offensive-security",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: System :: Hardware",
+]
+
+dependencies = [
+    "Pillow>=9.0.0",
+    "psutil>=5.9.0",
+    "numpy>=1.21.0",
+]
+
+[project.optional-dependencies]
+# Hardware dependencies (Pi only)
+hardware = [
+    "RPi.GPIO>=0.7.0",
+    "spidev>=3.5",
+]
+
+# Development dependencies
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+    "flake8>=6.0.0",
+]
+
+# Simulator dependencies
+simulator = [
+    "pygame>=2.1.0",
+]
+
+[project.scripts]
+kalipimax = "main:main"
+
+[project.urls]
+Homepage = "https://github.com/kalipimax/kalipimax"
+Documentation = "https://github.com/kalipimax/kalipimax#readme"
+Repository = "https://github.com/kalipimax/kalipimax.git"
+Issues = "https://github.com/kalipimax/kalipimax/issues"
+
+[tool.setuptools]
+packages = ["core", "ui", "modes", "actions"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md", "*.txt"]
+
+# Testing
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+# Coverage
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "simulator.py",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+
+# Code formatting
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.pytest_cache
+  | __pycache__
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+known_first_party = ["core", "ui", "modes", "actions", "config"]
+
+# Type checking
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+exclude = [
+    "tests/",
+    "simulator.py",
+]
+
+# Linting
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "*.pyc",
+]
