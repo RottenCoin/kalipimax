@@ -13,7 +13,7 @@ from ui.base_mode import MenuMode
 from ui.renderer import Canvas, get_colour_for_percent
 from core.state import state, AlertLevel
 from core.payload import payload_runner
-from config import CONFIRM_TIMEOUT
+from config import CONFIRM_TIMEOUT, BASE_DIR
 
 
 def get_cpu_temp() -> float:
@@ -53,6 +53,7 @@ class SystemMode(MenuMode):
             {'icon': '⟳', 'text': 'Reboot', 'action': self._reboot},
             {'icon': '⏻', 'text': 'Shutdown', 'action': self._shutdown},
             {'icon': '✕', 'text': 'Kill All Tools', 'action': self._kill_all},
+            {'icon': '↓', 'text': 'Update&Relaunch', 'action': self._update_and_reboot},
         ]
     
     def _reboot(self):
@@ -74,6 +75,21 @@ class SystemMode(MenuMode):
     def _kill_all(self):
         """Kill all offensive tools."""
         payload_runner.kill_all_tools()
+    
+    def _update_and_reboot(self):
+        """Git pull from main branch, then reboot."""
+        if state.request_confirm("update", CONFIRM_TIMEOUT):
+            state.add_alert("Updating from GitHub...", AlertLevel.INFO)
+            repo_dir = str(BASE_DIR)
+            cmd = (
+                f"cd {repo_dir} && "
+                f"timeout 120 git fetch origin main && "
+                f"git reset --hard origin/main && "
+                f"sudo reboot"
+            )
+            payload_runner.run(cmd, "Update&Relaunch", timeout=150)
+        else:
+            state.add_alert("Press again to update", AlertLevel.WARNING)
     
     def render(self) -> Image.Image:
         canvas = self._create_canvas()

@@ -2,6 +2,15 @@
 """
 KaliPiMax Loot Mode
 Browse and manage captured data files.
+
+Navigation:
+    Enter mode → Files list
+    ●/K1: Open selected file content
+    ●/K1: Back to files (from content view)
+    ←: Back one level (content→files→stats, or change mode)
+    →: Forward one level (stats→files→content, or change mode)
+    ↑↓: Navigate / scroll content
+    K3: Cleanup files older than 7 days
 """
 
 import os
@@ -93,22 +102,31 @@ class LootMode(BaseMode):
     
     VIEW_STATS = 0
     VIEW_FILES = 1
+    VIEW_CONTENT = 2
+    
+    _CONTENT_MAX_BYTES = 4096
+    _CONTENT_LINE_WIDTH = 24
+    _CONTENT_VISIBLE = 11
     
     def __init__(self):
         super().__init__("LOOT", "📁")
         
-        self._view = self.VIEW_STATS
+        self._view = self.VIEW_FILES
         self._stats = {}
         self._files = []
         self._selected = 0
         self._scroll_offset = 0
         self._visible_count = 6
         self._last_refresh = 0
+        self._content_lines = []
+        self._content_scroll = 0
+        self._content_name = ""
     
     def on_enter(self):
-        self._refresh_data()
+        self._view = self.VIEW_FILES
         self._selected = 0
         self._scroll_offset = 0
+        self._refresh_data()
     
     def _refresh_data(self):
         """Refresh loot statistics and file list."""
@@ -120,44 +138,75 @@ class LootMode(BaseMode):
         max_items = len(LOOT_SUBDIRS) if self._view == self.VIEW_STATS else len(self._files)
         self._selected = min(self._selected, max(0, max_items - 1))
     
+    # -----------------------------------------------------------------
+    # Navigation
+    # -----------------------------------------------------------------
+    
     def on_up(self):
+        if self._view == self.VIEW_CONTENT:
+            if self._content_scroll > 0:
+                self._content_scroll -= 1
+                state.render_needed = True
+            return
         if self._selected > 0:
             self._selected -= 1
             self._update_scroll()
             state.render_needed = True
     
     def on_down(self):
+        if self._view == self.VIEW_CONTENT:
+            max_scroll = max(0, len(self._content_lines) - self._CONTENT_VISIBLE)
+            if self._content_scroll < max_scroll:
+                self._content_scroll += 1
+                state.render_needed = True
+            return
         max_items = len(LOOT_SUBDIRS) if self._view == self.VIEW_STATS else len(self._files)
         if self._selected < max_items - 1:
             self._selected += 1
             self._update_scroll()
             state.render_needed = True
     
-    def _update_scroll(self):
-        if self._selected < self._scroll_offset:
-            self._scroll_offset = self._selected
-        elif self._selected >= self._scroll_offset + self._visible_count:
-            self._scroll_offset = self._selected - self._visible_count + 1
+    def on_left(self):
+        """Left: back one level, or change mode from top level."""
+        if self._view == self.VIEW_CONTENT:
+            self._view = self.VIEW_FILES
+            state.render_needed = True
+        elif self._view == self.VIEW_FILES:
+            self._view = self.VIEW_STATS
+            self._selected = 0
+            self._scroll_offset = 0
+            state.render_needed = True
+        else:
+            state.change_mode(-1)
     
-    def on_press(self):
-        """Switch view or show file info."""
+    def on_right(self):
+        """Right: forward one level, or change mode from deepest level."""
         if self._view == self.VIEW_STATS:
             self._view = self.VIEW_FILES
             self._selected = 0
             self._scroll_offset = 0
+            state.render_needed = True
+        elif self._view == self.VIEW_FILES:
+            self._open_content()
         else:
-            # Show file info
-            if self._files and self._selected < len(self._files):
-                f = self._files[self._selected]
-                state.add_alert(f"{f['category']}/{f['name']}", AlertLevel.INFO)
-        state.render_needed = True
+            state.change_mode(1)
+    
+    def on_press(self):
+        """Joystick press: open from any list, back from content."""
+        if self._view == self.VIEW_CONTENT:
+            self._view = self.VIEW_FILES
+            state.render_needed = True
+        elif self._view == self.VIEW_FILES:
+            self._open_content()
+        elif self._view == self.VIEW_STATS:
+            self._view = self.VIEW_FILES
+            self._selected = 0
+            self._scroll_offset = 0
+            state.render_needed = True
     
     def on_key1(self):
-        """Toggle between views."""
-        self._view = self.VIEW_FILES if self._view == self.VIEW_STATS else self.VIEW_STATS
-        self._selected = 0
-        self._scroll_offset = 0
-        state.render_needed = True
+        """K1: same as joystick press."""
+        self.on_press()
     
     def on_key3(self):
         """Cleanup old files."""
@@ -166,26 +215,108 @@ class LootMode(BaseMode):
         self._refresh_data()
         state.render_needed = True
     
+    def _update_scroll(self):
+        if self._selected < self._scroll_offset:
+            self._scroll_offset = self._selected
+        elif self._selected >= self._scroll_offset + self._visible_count:
+            self._scroll_offset = self._selected - self._visible_count + 1
+    
+    # -----------------------------------------------------------------
+    # Content viewer
+    # -----------------------------------------------------------------
+    
+    def _open_content(self):
+        """Load and display selected file's content."""
+        if not self._files:
+            state.add_alert("No loot files found", AlertLevel.WARNING)
+            state.render_needed = True
+            return
+        if self._selected >= len(self._files):
+            state.add_alert("Selection out of range", AlertLevel.ERROR)
+            state.render_needed = True
+            return
+        try:
+            f = self._files[self._selected]
+            self._content_name = f['name']
+            self._content_lines = self._load_content(f['path'])
+            self._content_scroll = 0
+            self._view = self.VIEW_CONTENT
+            state.render_needed = True
+        except Exception as e:
+            state.add_alert(f"Open: {str(e)[:25]}", AlertLevel.ERROR)
+            state.render_needed = True
+    
+    def _load_content(self, filepath) -> list:
+        """Read file and return wrapped lines for display."""
+        try:
+            with open(filepath, 'rb') as fh:
+                raw = fh.read(self._CONTENT_MAX_BYTES)
+        except Exception as e:
+            return [f"[Error: {str(e)[:20]}]"]
+        
+        # Detect binary (null bytes in first 512 bytes)
+        if b'\x00' in raw[:512]:
+            return [
+                "[Binary file]",
+                f"{len(raw)} bytes read",
+                "",
+                "Use CLI/SCP to",
+                "transfer & view",
+            ]
+        
+        try:
+            text = raw.decode('utf-8', errors='replace')
+        except Exception:
+            return ["[Decode error]"]
+        
+        w = self._CONTENT_LINE_WIDTH
+        lines = []
+        for line in text.splitlines():
+            line = line.rstrip()
+            if not line:
+                lines.append("")
+                continue
+            while len(line) > w:
+                lines.append(line[:w])
+                line = line[w:]
+            lines.append(line)
+        
+        if not lines:
+            lines = ["[Empty file]"]
+        
+        return lines
+    
+    # -----------------------------------------------------------------
+    # Rendering
+    # -----------------------------------------------------------------
+    
     def render(self) -> Image.Image:
         canvas = self._create_canvas()
         
-        # Auto-refresh every 10s
-        if time.time() - self._last_refresh > 10:
+        # Auto-refresh every 10s (not in content view)
+        if self._view != self.VIEW_CONTENT and time.time() - self._last_refresh > 10:
             self._refresh_data()
         
         y = 2
         
         # Header
-        view_name = "Stats" if self._view == self.VIEW_STATS else "Files"
-        canvas.text(2, y, f"LOOT [{view_name}]", colour='title', font='title')
+        if self._view == self.VIEW_CONTENT:
+            name = self._content_name[:14]
+            canvas.text(2, y, name, colour='title', font='title')
+        else:
+            view_name = "Stats" if self._view == self.VIEW_STATS else "Files"
+            canvas.text(2, y, f"LOOT [{view_name}]", colour='title', font='title')
         y += 16
         
         if self._view == self.VIEW_STATS:
             y = self._render_stats(canvas, y)
-        else:
+            canvas.footer("●:Files  K3:Cleanup")
+        elif self._view == self.VIEW_FILES:
             y = self._render_files(canvas, y)
-        
-        canvas.footer("K1:View K3:Cleanup ●:Detail")
+            canvas.footer("●:Open  K3:Cleanup")
+        else:
+            self._render_content(canvas, y)
+            canvas.footer("●:Back  \u2191\u2193:Scroll")
         
         return canvas.get_image()
     
@@ -266,5 +397,24 @@ class LootMode(BaseMode):
             thumb_pos = bar_y + int((bar_height - thumb_height) * self._scroll_offset / max_offset) if max_offset > 0 else bar_y
             
             canvas.rect(bar_x, thumb_pos, 127, thumb_pos + thumb_height, fill='scrollbar_thumb')
+        
+        return y
+    
+    def _render_content(self, canvas: Canvas, y: int) -> int:
+        """Render scrollable file content."""
+        visible = self._content_lines[
+            self._content_scroll:self._content_scroll + self._CONTENT_VISIBLE
+        ]
+        
+        for line in visible:
+            canvas.text(2, y, line[:self._CONTENT_LINE_WIDTH], colour='text', font='tiny')
+            y += 9
+        
+        # Scroll position indicator
+        total = len(self._content_lines)
+        if total > self._CONTENT_VISIBLE:
+            pos = self._content_scroll + 1
+            end = min(self._content_scroll + self._CONTENT_VISIBLE, total)
+            canvas.text(85, 2, f"{pos}-{end}/{total}", colour='text_dim', font='tiny')
         
         return y
