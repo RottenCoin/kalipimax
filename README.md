@@ -331,9 +331,12 @@ iw list | grep -A 10 "Supported interface modes"
 
 ## Credits
 
-- Inspired by [Raspyjack](https://github.com/7h30th3r0n3/Raspyjack)
-- Waveshare LCD documentation
-- Kali Linux team
+- 7h30th3r0n3 for Raspyjack (https://github.com/7h30th3r0n3/Raspyjack)
+- Waveshare for boring documentation
+- Myself for making great coffee while I was typing
+- Kali Linux team for great toolbox
+- Raspberry Pi for nearly perfect hardware
+- Anthropic for polishing my turd
 
 ---
 

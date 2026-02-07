@@ -20,7 +20,7 @@ try:
     HARDWARE_AVAILABLE = True
 except ImportError:
     HARDWARE_AVAILABLE = False
-    log.warning("RPi.GPIO/spidev not available - running in simulation mode")
+    print("Warning: RPi.GPIO/spidev not available - running in simulation mode")
 
 from PIL import Image
 
