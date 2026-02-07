@@ -2,6 +2,15 @@
 """
 KaliPiMax Loot Mode
 Browse and manage captured data files.
+
+Navigation:
+    Enter mode → Files list
+    ●/K1: Open selected file content
+    ●/K1: Back to files (from content view)
+    ←: Back one level (content→files→stats, or change mode)
+    →: Forward one level (stats→files→content, or change mode)
+    ↑↓: Navigate / scroll content
+    K3: Cleanup files older than 7 days
 """
 
 import os
@@ -102,7 +111,7 @@ class LootMode(BaseMode):
     def __init__(self):
         super().__init__("LOOT", "📁")
         
-        self._view = self.VIEW_STATS
+        self._view = self.VIEW_FILES
         self._stats = {}
         self._files = []
         self._selected = 0
@@ -114,9 +123,10 @@ class LootMode(BaseMode):
         self._content_name = ""
     
     def on_enter(self):
-        self._refresh_data()
+        self._view = self.VIEW_FILES
         self._selected = 0
         self._scroll_offset = 0
+        self._refresh_data()
     
     def _refresh_data(self):
         """Refresh loot statistics and file list."""
@@ -127,6 +137,10 @@ class LootMode(BaseMode):
         # Adjust selection bounds
         max_items = len(LOOT_SUBDIRS) if self._view == self.VIEW_STATS else len(self._files)
         self._selected = min(self._selected, max(0, max_items - 1))
+    
+    # -----------------------------------------------------------------
+    # Navigation
+    # -----------------------------------------------------------------
     
     def on_up(self):
         if self._view == self.VIEW_CONTENT:
@@ -152,47 +166,85 @@ class LootMode(BaseMode):
             self._update_scroll()
             state.render_needed = True
     
+    def on_left(self):
+        """Left: back one level, or change mode from top level."""
+        if self._view == self.VIEW_CONTENT:
+            self._view = self.VIEW_FILES
+            state.render_needed = True
+        elif self._view == self.VIEW_FILES:
+            self._view = self.VIEW_STATS
+            self._selected = 0
+            self._scroll_offset = 0
+            state.render_needed = True
+        else:
+            state.change_mode(-1)
+    
+    def on_right(self):
+        """Right: forward one level, or change mode from deepest level."""
+        if self._view == self.VIEW_STATS:
+            self._view = self.VIEW_FILES
+            self._selected = 0
+            self._scroll_offset = 0
+            state.render_needed = True
+        elif self._view == self.VIEW_FILES:
+            self._open_content()
+        else:
+            state.change_mode(1)
+    
+    def on_press(self):
+        """Joystick press: open from any list, back from content."""
+        if self._view == self.VIEW_CONTENT:
+            self._view = self.VIEW_FILES
+            state.render_needed = True
+        elif self._view == self.VIEW_FILES:
+            self._open_content()
+        elif self._view == self.VIEW_STATS:
+            self._view = self.VIEW_FILES
+            self._selected = 0
+            self._scroll_offset = 0
+            state.render_needed = True
+    
+    def on_key1(self):
+        """K1: same as joystick press."""
+        self.on_press()
+    
+    def on_key3(self):
+        """Cleanup old files."""
+        deleted = delete_old_files(7)
+        state.add_alert(f"Deleted {deleted} files (>7d)", AlertLevel.OK)
+        self._refresh_data()
+        state.render_needed = True
+    
     def _update_scroll(self):
         if self._selected < self._scroll_offset:
             self._scroll_offset = self._selected
         elif self._selected >= self._scroll_offset + self._visible_count:
             self._scroll_offset = self._selected - self._visible_count + 1
     
-    def on_press(self):
-        """Open: Stats→Files, Files→Content, Content→Files."""
-        if self._view == self.VIEW_STATS:
-            self._view = self.VIEW_FILES
-            self._selected = 0
-            self._scroll_offset = 0
-        elif self._view == self.VIEW_FILES:
-            self._open_content()
-        else:
-            self._view = self.VIEW_FILES
-        state.render_needed = True
-    
-    def on_key1(self):
-        """Toggle between Stats and Files views."""
-        if self._view == self.VIEW_CONTENT:
-            self._view = self.VIEW_FILES
-        elif self._view == self.VIEW_STATS:
-            self._view = self.VIEW_FILES
-            self._selected = 0
-            self._scroll_offset = 0
-        else:
-            self._view = self.VIEW_STATS
-            self._selected = 0
-            self._scroll_offset = 0
-        state.render_needed = True
+    # -----------------------------------------------------------------
+    # Content viewer
+    # -----------------------------------------------------------------
     
     def _open_content(self):
         """Load and display selected file's content."""
-        if not self._files or self._selected >= len(self._files):
+        if not self._files:
+            state.add_alert("No loot files found", AlertLevel.WARNING)
+            state.render_needed = True
             return
-        f = self._files[self._selected]
-        self._content_name = f['name']
-        self._content_lines = self._load_content(f['path'])
-        self._content_scroll = 0
-        self._view = self.VIEW_CONTENT
+        if self._selected >= len(self._files):
+            state.add_alert("Selection out of range", AlertLevel.ERROR)
+            state.render_needed = True
+            return
+        try:
+            f = self._files[self._selected]
+            self._content_name = f['name']
+            self._content_lines = self._load_content(f['path'])
+            self._content_scroll = 0
+            self._view = self.VIEW_CONTENT
+            state.render_needed = True
+        except Exception as e:
+            state.add_alert(f"Open: {str(e)[:25]}", AlertLevel.ERROR)
+            state.render_needed = True
     
     def _load_content(self, filepath) -> list:
         """Read file and return wrapped lines for display."""
@@ -234,12 +286,9 @@ class LootMode(BaseMode):
         
         return lines
     
-    def on_key3(self):
-        """Cleanup old files."""
-        deleted = delete_old_files(7)
-        state.add_alert(f"Deleted {deleted} files (>7d)", AlertLevel.OK)
-        self._refresh_data()
-        state.render_needed = True
+    # -----------------------------------------------------------------
+    # Rendering
+    # -----------------------------------------------------------------
     
     def render(self) -> Image.Image:
         canvas = self._create_canvas()
@@ -261,10 +310,10 @@ class LootMode(BaseMode):
         
         if self._view == self.VIEW_STATS:
             y = self._render_stats(canvas, y)
-            canvas.footer("K1:Files  K3:Cleanup")
+            canvas.footer("●:Files  K3:Cleanup")
         elif self._view == self.VIEW_FILES:
             y = self._render_files(canvas, y)
-            canvas.footer("●:View  K1:Stats  K3:Clean")
+            canvas.footer("●:Open  K3:Cleanup")
         else:
             self._render_content(canvas, y)
             canvas.footer("●:Back  \u2191\u2193:Scroll")
