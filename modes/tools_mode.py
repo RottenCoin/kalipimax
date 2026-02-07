@@ -205,12 +205,12 @@ class ToolsMode(MenuMode):
         self._menu.start_y = y
         self._render_menu(canvas, start_y=y)
         
-        # Show description of selected tool
+        # Show description of selected tool in footer area
         selected_idx = self._get_selected_index()
         if selected_idx < len(TOOLS):
             desc = TOOLS[selected_idx].get('desc', '')
-            canvas.text(2, 115, desc, colour='text_dim', font='tiny')
-        
-        self._render_footer(canvas, "●:Toggle K3:Refresh")
+            self._render_footer(canvas, desc)
+        else:
+            self._render_footer(canvas, "●:Toggle K3:Refresh")
         
         return canvas.get_image()

@@ -216,10 +216,10 @@ class ProfilesMode(MenuMode):
         self._menu.start_y = y
         self._render_menu(canvas, start_y=y)
         
-        # Show description of selected profile
+        # Show description of selected profile in footer area
         selected_idx = self._get_selected_index()
         if selected_idx < len(PROFILES):
             desc = PROFILES[selected_idx].get('desc', '')
-            canvas.text(2, 115, desc[:22], colour='text_dim', font='tiny')
+            self._render_footer(canvas, desc[:22])
         
         return canvas.get_image()
