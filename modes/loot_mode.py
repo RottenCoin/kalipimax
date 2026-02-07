@@ -159,15 +159,7 @@ class LootMode(BaseMode):
             self._scroll_offset = self._selected - self._visible_count + 1
     
     def on_press(self):
-        """Switch from stats to files view."""
-        if self._view == self.VIEW_STATS:
-            self._view = self.VIEW_FILES
-            self._selected = 0
-            self._scroll_offset = 0
-            state.render_needed = True
-    
-    def on_key1(self):
-        """Cycle views: Stats → Files → Content → Files."""
+        """Open: Stats→Files, Files→Content, Content→Files."""
         if self._view == self.VIEW_STATS:
             self._view = self.VIEW_FILES
             self._selected = 0
@@ -175,8 +167,21 @@ class LootMode(BaseMode):
         elif self._view == self.VIEW_FILES:
             self._open_content()
         else:
-            # Content → back to Files
             self._view = self.VIEW_FILES
+        state.render_needed = True
+    
+    def on_key1(self):
+        """Toggle between Stats and Files views."""
+        if self._view == self.VIEW_CONTENT:
+            self._view = self.VIEW_FILES
+        elif self._view == self.VIEW_STATS:
+            self._view = self.VIEW_FILES
+            self._selected = 0
+            self._scroll_offset = 0
+        else:
+            self._view = self.VIEW_STATS
+            self._selected = 0
+            self._scroll_offset = 0
         state.render_needed = True
     
     def _open_content(self):
@@ -259,10 +264,10 @@ class LootMode(BaseMode):
             canvas.footer("K1:Files  K3:Cleanup")
         elif self._view == self.VIEW_FILES:
             y = self._render_files(canvas, y)
-            canvas.footer("K1:View  K3:Cleanup")
+            canvas.footer("●:View  K1:Stats  K3:Clean")
         else:
             self._render_content(canvas, y)
-            canvas.footer("K1:Back  \u2191\u2193:Scroll")
+            canvas.footer("●:Back  \u2191\u2193:Scroll")
         
         return canvas.get_image()
     
