@@ -411,13 +411,19 @@ class WiFiMode(MenuMode):
             super().on_press()
     
     def on_key1(self):
+        if self._connect_state is not None:
+            pass  # K1 unused during connect flow
+        else:
+            super().on_key1()
+    
+    def on_key2(self):
         if self._connect_state == self._ST_PASSWORD:
             self._keyboard.toggle_shift()
             state.render_needed = True
         elif self._connect_state is not None:
-            pass
+            pass  # Block mode change during connect flow
         else:
-            super().on_key1()
+            super().on_key2()
     
     def on_key3(self):
         if self._connect_state is not None:
@@ -544,4 +550,4 @@ class WiFiMode(MenuMode):
         # Keyboard grid
         self._keyboard.render(canvas, y_start=32)
         
-        canvas.footer("K1:Shift  K3:Cancel")
+        canvas.footer("K2:Shift  K3:Cancel")
