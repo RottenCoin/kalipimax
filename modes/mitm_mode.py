@@ -11,6 +11,7 @@ from ui.base_mode import MenuMode
 from ui.renderer import Canvas
 from core.state import state, AlertLevel
 from core.payload import payload_runner, get_loot_path
+from core.wifi_tools import get_target_interface
 from config import MITM_TIMEOUT, CAPTURE_TIMEOUT
 
 
@@ -92,7 +93,7 @@ class MITMMode(MenuMode):
     
     def _refresh_network_info(self):
         """Refresh network configuration."""
-        self._interface = get_interface()
+        self._interface = get_target_interface()
         self._gateway = get_gateway()
         self._local_ip = get_local_ip()
     

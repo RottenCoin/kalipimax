@@ -12,6 +12,7 @@ from ui.base_mode import MenuMode
 from ui.renderer import Canvas
 from core.state import state, AlertLevel
 from core.payload import payload_runner, get_loot_path
+from core.wifi_tools import get_target_interface
 from config import ETH_INTERFACE, RESPONDER_TIMEOUT, LOOT_DIR
 
 
@@ -91,7 +92,7 @@ class ResponderMode(MenuMode):
     
     def on_enter(self):
         super().on_enter()
-        self._interface = get_primary_interface()
+        self._interface = get_target_interface()
         self._hash_count = count_captured_hashes()
     
     def _start_responder(self):
@@ -192,6 +193,6 @@ class ResponderMode(MenuMode):
         if is_responder_running():
             self._stop_responder()
         else:
-            self._interface = get_primary_interface()
+            self._interface = get_target_interface()
             self._refresh_hash_count()
             state.render_needed = True

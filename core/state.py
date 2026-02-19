@@ -95,6 +95,11 @@ class AppState:
         # Confirmation state for destructive actions
         self._pending_confirm: Optional[str] = None
         self._confirm_expires: float = 0
+        
+        # WiFi tools-on-target state
+        self._tools_on_target = False
+        self._target_ssid = ""
+        self._target_password = ""
     
     # -------------------------------------------------------------------------
     # Properties with thread-safe access
@@ -289,6 +294,39 @@ class AppState:
         """Check if a payload is currently running."""
         with self._lock:
             return self._payload_status == PayloadStatus.RUNNING
+    
+    # -------------------------------------------------------------------------
+    # WiFi tools-on-target
+    # -------------------------------------------------------------------------
+    
+    @property
+    def tools_on_target(self) -> bool:
+        with self._lock:
+            return self._tools_on_target
+    
+    @property
+    def target_ssid(self) -> str:
+        with self._lock:
+            return self._target_ssid
+    
+    @property
+    def target_password(self) -> str:
+        with self._lock:
+            return self._target_password
+    
+    def set_tools_on_target(self, ssid: str, password: str):
+        """Enable tools-on-target mode for the given network."""
+        with self._lock:
+            self._tools_on_target = True
+            self._target_ssid = ssid
+            self._target_password = password
+    
+    def clear_tools_on_target(self):
+        """Disable tools-on-target mode."""
+        with self._lock:
+            self._tools_on_target = False
+            self._target_ssid = ""
+            self._target_password = ""
     
     def request_confirm(self, action_name: str, timeout: float = 3.0) -> bool:
         """

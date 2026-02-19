@@ -3,3 +3,4 @@ __pycache__/
 *.pyo
 logs/*.log
 loot/
+wifi_profiles.json
