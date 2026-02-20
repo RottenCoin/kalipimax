@@ -48,6 +48,7 @@ class SystemMode(MenuMode):
     
     def __init__(self):
         super().__init__("SYSTEM", "⚙")
+        self._updating = False
         
         self._menu_items = [
             {'icon': '⟳', 'text': 'Reboot', 'action': self._reboot},
@@ -79,7 +80,8 @@ class SystemMode(MenuMode):
     def _update_and_reboot(self):
         """Git pull from main branch, then reboot."""
         if state.request_confirm("update", CONFIRM_TIMEOUT):
-            state.add_alert("Updating from GitHub...", AlertLevel.INFO)
+            self._updating = True
+            state.render_needed = True
             repo_dir = str(BASE_DIR)
             cmd = (
                 f"cd {repo_dir} && "
@@ -93,6 +95,12 @@ class SystemMode(MenuMode):
     
     def render(self) -> Image.Image:
         canvas = self._create_canvas()
+        
+        if getattr(self, '_updating', False):
+            canvas.text(18, 30, "UPDATING", colour='warning', font='title')
+            canvas.text(30, 55, "WAIT!", colour='error', font='title')
+            canvas.text(10, 85, "Do not power off", colour='text_dim', font='small')
+            return canvas.get_image()
         
         y = self._render_header(canvas)
         
